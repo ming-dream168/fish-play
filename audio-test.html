@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AudioEngine 试听台</title>
+  <link rel="icon" href="data:," />
+  <style>
+    :root { color-scheme: dark; }
+    body { margin: 0; padding: 20px 24px; background: #06121a; color: #b9d3df; font: 14px/1.5 -apple-system, "PingFang SC", sans-serif; }
+    h1 { font-size: 16px; font-weight: 600; margin: 0 0 4px; color: #e6f4fa; }
+    p.hint { margin: 0 0 16px; color: #6f8f9e; }
+    .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 8px 0; }
+    .row > span { width: 130px; color: #6f8f9e; }
+    button { background: #0e2a38; color: #cfe8f3; border: 1px solid #1d4256; border-radius: 6px; padding: 5px 10px; cursor: pointer; font: inherit; }
+    button:hover { background: #143a4e; }
+    input[type=range] { width: 260px; }
+    pre { margin-top: 24px; padding: 12px; background: #040d13; border: 1px solid #12303f; border-radius: 6px; white-space: pre-wrap; max-height: 40vh; overflow: auto; }
+  </style>
+</head>
+<body>
+  <h1>AudioEngine 试听台 + 离线验证</h1>
+  <p class="hint">点 "开启声音" 后可逐个试听. 自动化测试由 scripts/audio-test.mjs 驱动, 不需要手动操作.</p>
+  <div id="lab"></div>
+  <div class="row"><span>自动化</span>
+    <button id="smoke">实时冒烟测试</button>
+    <button id="suite">离线套件 (较慢)</button>
+    <button id="soak">实时长跑 60 s</button>
+  </div>
+  <pre id="out">就绪.</pre>
+  <script type="module">
+    import { AudioEngine } from '/src/audio/AudioEngine.ts';
+    import { runSuite, renderWavs, renderSpectrograms, liveSmoke, soak } from '/src/audio/harness.ts';
+    import { mountLab } from '/src/audio/lab.ts';
+
+    const out = document.getElementById('out');
+    const engine = new AudioEngine();
+    mountLab(document.getElementById('lab'), engine);
+    window.__audioTest = { runSuite, renderWavs, renderSpectrograms, liveSmoke, soak, engine };
+
+    document.getElementById('smoke').addEventListener('click', async () => {
+      out.textContent = '实时冒烟测试进行中 (约 12 s)...';
+      window.__smoke = await liveSmoke();
+      out.textContent = JSON.stringify(window.__smoke, null, 2);
+    });
+    document.getElementById('soak').addEventListener('click', async () => {
+      out.textContent = '实时长跑进行中 (60 s)...';
+      window.__soak = await soak(window.__soakSeconds || 60);
+      out.textContent = JSON.stringify(window.__soak, null, 2);
+    });
+    document.getElementById('suite').addEventListener('click', async () => {
+      out.textContent = '离线套件进行中...';
+      const r = await runSuite();
+      out.textContent = JSON.stringify(r, null, 2);
+    });
+    window.__ready = true;
+  </script>
+</body>
+</html>

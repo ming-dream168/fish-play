@@ -1,0 +1,13 @@
+import { chromium } from 'playwright';
+const [, , path, out, code, wait = '1500', vw = '1600', vh = '900'] = process.argv;
+const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--ignore-gpu-blocklist'] });
+const page = await browser.newPage({ viewport: { width: +vw, height: +vh } });
+page.on('pageerror', (e) => console.log('[pageerror]', e.message));
+await page.goto('http://127.0.0.1:5173' + path, { waitUntil: 'load' });
+await page.waitForFunction(() => window.__ready === true, null, { timeout: 20000 });
+await page.waitForTimeout(2000);
+const r = await page.evaluate(code);
+console.log('eval ->', JSON.stringify(r));
+await page.waitForTimeout(+wait);
+await page.screenshot({ path: out });
+await browser.close();

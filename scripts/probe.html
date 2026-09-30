@@ -1,0 +1,14 @@
+<!doctype html><html><body><canvas id=c width=64 height=64></canvas><script>
+const gl = document.getElementById('c').getContext('webgl2');
+const out = {};
+if (!gl) { out.err = 'no webgl2'; } else {
+  const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+  out.renderer = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
+  out.vendor = dbg ? gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL) : '';
+  out.cbf = !!gl.getExtension('EXT_color_buffer_float');
+  out.floatBlend = !!gl.getExtension('EXT_float_blend');
+  out.maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+  out.max3D = gl.getParameter(gl.MAX_3D_TEXTURE_SIZE);
+}
+document.title = JSON.stringify(out);
+</script></body></html>
