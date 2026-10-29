@@ -224,7 +224,7 @@ export interface ExtrasSpec {
   lure: { len: number; s: number; tilt: number; esca: number; glow: string; lum: number; shape: number; color: string; escaColor: string };
   kype: number; // 雄性钩吻
   hump: number;
-  // 须: 每侧最多两根. s 位置, th 截面角 (π/2 背中线, 0 体侧, -π/2 腹中线), len 长 (L), dir 伸出方向 (后, 上, 外), droop 下垂
+  // 须: 每侧最多五根. s 位置, th 截面角 (π/2 背中线, 0 体侧, -π/2 腹中线), len 长 (L), dir 伸出方向 (后, 上, 外), droop 下垂
   barbels: { items: { s: number; th: number; len: number; dir: V3; droop: number }[]; thick: number; color: string };
   // 骨板 (鲟): 背行 1 列, 侧行与腹侧行左右各 1 列; size 骨板长 (L)
   scutes: { dorsal: number; lateral: number; ventral: number; size: number; s0: number; color: string };

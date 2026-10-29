@@ -101,7 +101,7 @@ export function buildScutes(body: BodyModel): InstanceData {
 }
 
 // ---------- 须 (鲤: 吻须与颌须各一对; 鲟: 吻部腹面一横排 4 根) ----------
-export const BARBEL_MAX = 2; // 每侧最多两根
+export const BARBEL_MAX = 5; // 每侧最多五根 (泥鳅 5 对, 鲿科 4 对); 不足的长度为 0, 拓扑不变
 
 export function buildBarbels(body: BodyModel): GeomData {
   const bb = body.spec.extras.barbels;

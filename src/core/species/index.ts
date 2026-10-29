@@ -11,10 +11,37 @@ import { hairtail } from './hairtail';
 import { largeyellow } from './croaker';
 import { goosefish } from './goosefish';
 import { puffer, pufferInflated } from './puffer';
+// 纯底层
+import { japeel } from './japeel';
+import { loach } from './loach';
+import { paramisgurnus } from './paramisgurnus';
+import { hemibarbus } from './hemibarbus';
+import { sarcosinensis } from './sarcosinensis';
+import { sarconigri } from './sarconigri';
+import { abbottina } from './abbottina';
+import { microphyso } from './microphyso';
+import { saurodabryi } from './saurodabryi';
+import { saurodumerili } from './saurodumerili';
+import { saurogymno } from './saurogymno';
+import { silurus } from './silurus';
+import { yellowcat } from './yellowcat';
+import { pbvachellii } from './pbvachellii';
+import { pbnitidus } from './pbnitidus';
+import { pbtenuis } from './pbtenuis';
+import { pbalbomarg } from './pbalbomarg';
+import { odontobutis } from './odontobutis';
+import { micropercops } from './micropercops';
+import { rhinogobius } from './rhinogobius';
+import { tridentiger } from './tridentiger';
+import { odontamblyopus } from './odontamblyopus';
+import { spinyeel } from './spinyeel';
+import { tonguesole } from './tonguesole';
 
 type Maker = () => SpeciesSpec;
 
-const makers: Partial<Record<SpeciesId, Maker>> = { whaleshark, sturgeon, carp, chum, ricefield, bluefin, hairtail, largeyellow, goosefish, puffer };
+const makers: Partial<Record<SpeciesId, Maker>> = { whaleshark, sturgeon, carp, chum, ricefield, bluefin, hairtail, largeyellow, goosefish, puffer,
+  japeel, loach, paramisgurnus, hemibarbus, sarcosinensis, sarconigri, abbottina, microphyso, saurodabryi, saurodumerili, saurogymno, silurus, yellowcat, pbvachellii, pbnitidus, pbtenuis, pbalbomarg, odontobutis, micropercops, rhinogobius, tridentiger, odontamblyopus, spinyeel, tonguesole,
+};
 const variants: Record<string, Maker> = {
   'chum-spawn': chumSpawn,
   'ricefield-male': ricefieldMale,

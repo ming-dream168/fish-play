@@ -14,7 +14,8 @@ import { ModeController, type Mode, type AnatomyView } from './render/modes';
 import { XRayRenderer } from './render/xray';
 import { Picker } from './render/picker';
 import { AtlasUI, type App } from './ui/ui';
-import { SPECIES_ORDER, type SpeciesId } from './data/types';
+import { SPECIES_ORDER, isCrustacean, type SpeciesId } from './data/types';
+import { Crustacean, type CrustaceanId } from './core/crustacean';
 import { AudioEngine, type SceneFlavor } from './audio/AudioEngine';
 import { FlowTank, type BodySample } from './sim/flowtank/FlowTank';
 
@@ -45,11 +46,15 @@ const env = new Environment(renderer, scene);
 
 const startId = ((): SpeciesId => {
   const q = params.get('species') as SpeciesId | null;
-  return q && hasSpecies(q) ? q : 'largeyellow';
+  return q && (hasSpecies(q) || isCrustacean(q)) ? q : 'largeyellow';
 })();
-const fish = new Fish(getSpecies(startId));
+// 甲壳动物不是鱼体蓝图: 鱼先按大黄鱼生成并藏起来, 甲壳动物用单独的模型
+const fish = new Fish(getSpecies(isCrustacean(startId) ? 'largeyellow' : startId));
 addAnatomy(fish);
 scene.add(fish.root);
+const crust = new Crustacean();
+crust.root.visible = false;
+scene.add(crust.root);
 // 饵球的生物光: 在深海里照亮鮟鱇自己的牙齿
 const escaLight = new THREE.PointLight('#7ef7ff', 0, 0, 2);
 fish.root.add(escaLight);
@@ -233,6 +238,7 @@ function flowBox(b = restBounds(extA, extB, fish.morph)) {
 }
 /** 当前模式下的全景取景框. */
 function homeBox(b = restBounds(extA, extB, fish.morph)) {
+  if (crust.active) return crust.box.clone();
   return modes.mode === 'flow' ? flowBox(b) : tiltBox(b);
 }
 controls.addEventListener('start', () => (camTw = null));
@@ -262,8 +268,32 @@ const app: App = {
     if (!specCache.has(id)) specCache.set(id, hasSpecies(id) ? getSpecies(id) : null);
     return specCache.get(id) ?? null;
   },
+  get crustacean() {
+    return crust.active ? crust : null;
+  },
   selectSpecies(id) {
-    if (morphing || (id === app.species && !variant) || !hasSpecies(id)) return;
+    if (morphing || (id === app.species && !variant)) return;
+    if (isCrustacean(id)) {
+      showCrustacean(id as CrustaceanId);
+      return;
+    }
+    if (!hasSpecies(id)) return;
+    if (crust.active) {
+      // 从甲壳动物回到鱼: 鱼直接换成目标物种再显示, 不做插值
+      crust.hide();
+      fish.root.visible = true;
+      app.select(null, false);
+      variant = null;
+      resetTilt(true);
+      fish.setTarget(getSpecies(id));
+      extB = extentPoints(fish.bodyB);
+      morphing = { id, t: 0.999, dur: 0.01 };
+      app.species = id;
+      frameTo(tiltBox(restBounds(extB, extB, 0)), 1.2, 1, undefined, SIDE_DIR);
+      ui?.syncSpecies();
+      ui?.syncMode();
+      return;
+    }
     app.select(null, false);
     variant = null;
     resetTilt();
@@ -274,6 +304,10 @@ const app: App = {
   setMode(m: Mode) {
     const prev = modes.mode;
     if (m === prev) return;
+    if (crust.active && m !== 'living') {
+      ui?.toast('甲壳动物没有鱼的内骨骼与鳔, 这里只提供活体模型.');
+      return;
+    }
     modes.setMode(m);
     // 新模式下看不到/点不到的选中结构 (例如透视时的皮肤) 直接取消
     if (app.selected && !pickable(app.selected)) app.select(null, false);
@@ -339,6 +373,26 @@ const app: App = {
     if (app.soundOn) audio.ui(kind);
   },
 };
+
+// 甲壳动物: 藏起鱼, 显示单独的程序化模型, 只保留活体模式
+const CRUST_DIRS: Record<CrustaceanId, THREE.Vector3> = {
+  mittencrab: new THREE.Vector3(0.3, 6, 4.4).normalize(), // 蟹从斜上方看背甲
+  riverprawn: new THREE.Vector3(0.4, 3.2, 5.6).normalize(),
+};
+function showCrustacean(id: CrustaceanId) {
+  app.select(null, false);
+  variant = null;
+  resetTilt(true);
+  if (modes.mode !== 'living') {
+    modes.setMode('living');
+  }
+  crust.show(id);
+  fish.root.visible = false;
+  app.species = id;
+  ui?.syncSpecies();
+  ui?.syncMode();
+  frameTo(crust.box.clone(), 1.2, 1, undefined, CRUST_DIRS[id]);
+}
 
 function audioFlavor(): SceneFlavor {
   const m = modes.mode;
@@ -805,6 +859,10 @@ addEventListener('resize', () => {
 });
 applyView();
 frameTo(restBounds(extA, extA, 0), 0, 1, undefined, SIDE_DIR);
+if (isCrustacean(startId)) {
+  showCrustacean(startId as CrustaceanId);
+  frameTo(crust.box.clone(), 0, 1, undefined, CRUST_DIRS[startId as CrustaceanId]);
+}
 const m0 = params.get('mode') as Mode | null;
 if (m0) app.setMode(m0);
 const v0 = params.get('view') as AnatomyView | null;
@@ -862,6 +920,7 @@ function pickable(p: Part) {
 }
 
 function pickAt(x: number, y: number) {
+  if (crust.active) return null;
   const r = picker.pick(fish, camera, x, y, innerWidth, innerHeight, pickable);
   return r ? r.part : null;
 }
@@ -873,7 +932,18 @@ function updateScreenBox() {
   let top = Infinity;
   let bottom = -Infinity;
   const t = fish.morph;
-  for (let i = 0; i < extA.length; i++) {
+  if (crust.active) {
+    const b = crust.box;
+    for (const x of [b.min.x, b.max.x])
+      for (const y of [b.min.y, b.max.y])
+        for (const z of [b.min.z, b.max.z]) {
+          tmp.set(x, y, z).project(camera);
+          const sy = (-tmp.y * 0.5 + 0.5) * innerHeight;
+          top = Math.min(top, sy);
+          bottom = Math.max(bottom, sy);
+        }
+  }
+  for (let i = 0; i < (crust.active ? 0 : extA.length); i++) {
     tmp.copy(extA[i]);
     if (t > 0 && extB[i]) tmp.lerp(extB[i], t);
     fish.midline.deform(tmp, tmp);
@@ -952,6 +1022,7 @@ function loop() {
   const heartBefore = fish.heart;
   const breathBefore = fish.breath;
   fish.update(fdt);
+  crust.update(fdt, fish.swimScale);
   modes.update(dt);
   if (app.soundOn && !app.paused) {
     // 心室收缩 (相位 0.42) 时发一声心跳, 每个呼吸周期一次鳃流

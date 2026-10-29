@@ -65,3 +65,69 @@ export function drawSilhouette(canvas: HTMLCanvasElement, spec: SpeciesSpec, col
     ctx.fill();
   }
 }
+
+/** 甲壳动物没有鱼体蓝图, 索引里画一个简笔剪影: 蟹为背视 (头甲 + 螯 + 步足), 虾为侧视. */
+export function drawCrustaceanSilhouette(canvas: HTMLCanvasElement, id: string, color: string, limbColor: string) {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const W = canvas.clientWidth || 64;
+  const H = canvas.clientHeight || 26;
+  canvas.width = Math.round(W * dpr);
+  canvas.height = Math.round(H * dpr);
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  const cx = W / 2;
+  const cy = H / 2;
+  if (id === 'mittencrab') {
+    const r = H * 0.3;
+    ctx.strokeStyle = limbColor;
+    ctx.lineWidth = 1.2;
+    for (const sx of [-1, 1]) {
+      for (let i = 0; i < 4; i++) {
+        const y0 = cy - r * 0.35 + i * r * 0.32;
+        ctx.beginPath();
+        ctx.moveTo(cx + sx * r * 0.9, y0);
+        ctx.lineTo(cx + sx * r * (1.9 + i * 0.12), y0 - r * 0.35 + i * 0.1 * r);
+        ctx.lineTo(cx + sx * r * (2.4 + i * 0.15), y0 + r * (0.5 + i * 0.25));
+        ctx.stroke();
+      }
+    }
+    ctx.fillStyle = color;
+    for (const sx of [-1, 1]) {
+      ctx.beginPath();
+      ctx.ellipse(cx + sx * r * 1.2, cy - r * 1.05, r * 0.42, r * 0.32, sx * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, r * 1.05, r * 0.95, 0, 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
+  // 虾: 弯曲的腹部 + 头胸甲 + 长螯足与触须
+  const L = W * 0.8;
+  const x0 = cx - L / 2;
+  ctx.strokeStyle = limbColor;
+  ctx.lineWidth = 0.9;
+  ctx.beginPath();
+  ctx.moveTo(x0 + L * 0.05, cy - H * 0.05);
+  ctx.quadraticCurveTo(x0 + L * 0.4, cy - H * 0.55, x0 + L * 1.02, cy - H * 0.35);
+  ctx.stroke();
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(x0 + L * 0.25, cy + H * 0.12);
+  ctx.quadraticCurveTo(x0 + L * 0.1, cy + H * 0.38, x0 - L * 0.06, cy + H * 0.3);
+  ctx.stroke();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(x0, cy - H * 0.02);
+  ctx.quadraticCurveTo(x0 + L * 0.2, cy - H * 0.3, x0 + L * 0.45, cy - H * 0.22);
+  ctx.quadraticCurveTo(x0 + L * 0.75, cy - H * 0.22, x0 + L * 0.88, cy + H * 0.05);
+  ctx.lineTo(x0 + L, cy + H * 0.2);
+  ctx.lineTo(x0 + L * 0.9, cy + H * 0.3);
+  ctx.quadraticCurveTo(x0 + L * 0.7, cy + H * 0.15, x0 + L * 0.45, cy + H * 0.16);
+  ctx.quadraticCurveTo(x0 + L * 0.2, cy + H * 0.18, x0, cy - H * 0.02);
+  ctx.fill();
+}

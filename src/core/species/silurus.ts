@@ -1,0 +1,303 @@
+import { makeSpecies, type SpeciesSpec } from '../spec';
+
+// 鲇 (鲇科鲇属 Silurus asotus): 体长, 前部粗圆, 后部强烈侧扁. 头宽而平扁, 口大, 亚上位, 下颌突出于上颌;
+// 两颌和犁骨上有绒毛状细齿带. 眼小, 位于头的背侧, 被皮膜覆盖. 成鱼须 2 对: 颌须 1 对很长, 向后可达胸鳍末端;
+// 颏须 1 对短 (幼鱼另有 1 对颏须, 长大后消失). 背鳍很小, 只有 4-6 根鳍条, 无硬刺; 没有脂鳍;
+// 臀鳍基部极长, 后端与尾鳍相连; 尾鳍小, 后缘微凹, 上叶略长. 胸鳍有 1 根硬刺, 前缘有弱锯齿.
+// 皮肤裸露无鳞, 黏液多; 体色灰褐到橄榄绿, 布满不规则的暗色与浅黄色云斑, 腹部灰白. 侧线平直, 有一列浅色孔点.
+// 内部: 韦伯氏器, 单室鳔, 有胃; 脊椎多 (60 节以上). 没有肌间刺.
+// 体形按照片测量: 体长 (吻端到尾鳍基) 885 px 下, 最大体高约 0.17, 头长约 0.2, 尾柄高约 0.055.
+export function silurus(): SpeciesSpec {
+  return makeSpecies({
+    id: 'silurus',
+    display: 4.6,
+    profile: {
+      top: [
+        [0, 0.012],
+        [0.025, 0.024],
+        [0.05, 0.032],
+        [0.12, 0.046],
+        [0.2, 0.06],
+        [0.33, 0.076],
+        [0.45, 0.08],
+        [0.55, 0.076],
+        [0.63, 0.068],
+        [0.75, 0.056],
+        [0.86, 0.044],
+        [0.95, 0.032],
+        [1, 0.027],
+      ],
+      bottom: [
+        [0, 0.012],
+        [0.025, 0.024],
+        [0.05, 0.033],
+        [0.12, 0.046],
+        [0.2, 0.062],
+        [0.33, 0.078],
+        [0.42, 0.08],
+        [0.55, 0.072],
+        [0.63, 0.064],
+        [0.75, 0.054],
+        [0.86, 0.044],
+        [0.95, 0.032],
+        [1, 0.027],
+      ],
+      // 头宽而平扁, 躯干后部强烈侧扁
+      width: [
+        [0, 0.016],
+        [0.03, 0.045],
+        [0.08, 0.062],
+        [0.15, 0.068],
+        [0.25, 0.066],
+        [0.38, 0.058],
+        [0.5, 0.046],
+        [0.65, 0.033],
+        [0.8, 0.022],
+        [0.92, 0.015],
+        [1, 0.011],
+      ],
+      axis: [
+        [0, -0.02],
+        [0.05, -0.011],
+        [0.12, -0.006],
+        [0.3, 0],
+        [0.63, 0.006],
+        [0.86, 0.004],
+        [1, -0.002],
+      ],
+      nTop: [
+        [0, 2.6],
+        [0.2, 2.3],
+        [0.45, 2.1],
+        [1, 2.0],
+      ],
+      nBottom: [
+        [0, 2.8],
+        [0.25, 2.4],
+        [0.5, 2.1],
+        [1, 2.0],
+      ],
+      snoutRound: 0.03,
+      tailCap: 0.008,
+    },
+    // 口宽大, 口裂伸到眼的下方; 下颌比上颌长; 两颌有绒毛状细齿带
+    mouth: { corner: 0.068, tipH: 0.0, cornerH: -0.2, bow: -0.06, gape: 0.04, pump: 0.07, jawLen: 0.022, teeth: 20, toothLen: 0.003, fang: 0, fangFront: 0, underbite: 0.008, toothShape: 0 },
+    // 眼小, 位于头背侧, 被皮膜覆盖
+    eye: { s: 0.071, h: 0.5, r: 0.0095, protrude: 0.25, iris: '#b89a6a', irisMetal: 0.4, pupil: 0.5 },
+    gill: {
+      edge: [
+        [0.6, 0.185],
+        [0.2, 0.205],
+        [-0.3, 0.2],
+        [-0.85, 0.155],
+      ],
+      top: 0.6,
+      bottom: -0.88,
+      flare: 0.004,
+      slits: 0,
+      arches: [0.11, 0.18],
+      groove: 0.3,
+    },
+    fins: [
+      {
+        // 背鳍很小, 4-6 根鳍条, 无硬刺
+        id: 'dorsalFin',
+        s0: 0.305,
+        s1: 0.355,
+        rays: 5,
+        spines: 0,
+        len: [
+          [0, 0.045],
+          [0.3, 0.05],
+          [1, 0.022],
+        ],
+        angle: [
+          [0, 0.75],
+          [1, 1.0],
+        ],
+        color: '#6a6a4a',
+        edgeColor: '#4a4a32',
+        opacity: 0.88,
+      },
+      // 鲇科没有脂鳍
+      { id: 'adiposeFin', present: 0 },
+      {
+        // 臀鳍极长, 鳍条 70 余根, 后端与尾鳍相连
+        id: 'analFin',
+        s0: 0.43,
+        s1: 0.995,
+        rays: 40,
+        spines: 0,
+        len: [
+          [0, 0.04],
+          [0.08, 0.058],
+          [0.5, 0.058],
+          [0.9, 0.048],
+          [1, 0.03],
+        ],
+        angle: [
+          [0, 0.7],
+          [1, 0.95],
+        ],
+        flutter: 0.004,
+        waves: 2,
+        color: '#7a8496',
+        edgeColor: '#4c5466',
+        opacity: 0.86,
+      },
+      {
+        // 尾鳍小, 后缘微凹, 上叶略长
+        id: 'caudalFin',
+        s0: 0.995,
+        rays: 17,
+        len: [
+          [0, 0.07],
+          [0.2, 0.075],
+          [0.5, 0.065],
+          [0.8, 0.085],
+          [1, 0.085],
+        ],
+        angle: [
+          [0, -0.4],
+          [0.5, 0.0],
+          [1, 0.35],
+        ],
+        baseH: 0.026,
+        baseCenter: 0,
+        color: '#6c7484',
+        edgeColor: '#3e4452',
+        opacity: 0.86,
+      },
+      {
+        // 胸鳍 I, 11-14: 硬刺前缘有弱锯齿
+        id: 'pectoralFin',
+        s0: 0.2,
+        h: -0.75,
+        rays: 13,
+        spines: 1,
+        len: [
+          [0, 0.1],
+          [0.25, 0.11],
+          [0.7, 0.08],
+          [1, 0.045],
+        ],
+        a: [0.92, 0.0, 0.38],
+        b: [0.95, -0.28, 0.12],
+        baseLen: 0.024,
+        color: '#8a8a72',
+        edgeColor: '#5a5a48',
+        opacity: 0.85,
+      },
+      {
+        // 腹鳍 i, 11-13 (多为 12), 小
+        id: 'pelvicFin',
+        s0: 0.38,
+        h: -0.95,
+        rays: 12,
+        len: [
+          [0, 0.065],
+          [1, 0.04],
+        ],
+        a: [0.75, -0.4, 0.5],
+        b: [0.95, -0.2, 0.15],
+        color: '#8a92a0',
+        edgeColor: '#5a6270',
+        opacity: 0.86,
+      },
+    ],
+    skin: {
+      dorsal: '#4c4a2c',
+      flank: '#7a7a52',
+      ventral: '#e6e2d4',
+      dorsalEdge: 0.35,
+      ventralEdge: -0.4,
+      softness: 0.35,
+      head: '#5c5a3a',
+      headMix: 0.2,
+      silver: 0.06,
+      iridescence: 0.05,
+      roughness: 0.36,
+      scaleSize: 0,
+      scaleDepth: 0,
+      // 体侧上半部的浅黄色云斑
+      spotColor: '#9e9a60',
+      spotSize: 0.02,
+      spotDensity: 0.55,
+      spotShape: 2,
+      spotH: [-0.35, 1],
+      spotS: [0.15, 0.97],
+      // 暗色大理石纹
+      mottle: 0.7,
+      mottleScale: 0.03,
+      mottleColor: '#34361c',
+      lateralLine: 0.5,
+      lateralLineH: [
+        [0, 0.45],
+        [0.2, 0.45],
+        [0.45, 0.25],
+        [0.75, 0.1],
+        [1, 0.05],
+      ],
+      interior: '#e2c2b2',
+      mouthColor: '#d0a090',
+      clearcoat: 0.8,
+    },
+    skeleton: {
+      // 没有查到可靠的脊椎数 (查到的资料数字残缺), 按鲇属体形与长臀鳍估计约 60 节
+      vertebrae: 60,
+      precaudal: 16,
+      centrumR: 0.0085,
+      spineLine: [
+        [0.19, 0.25],
+        [0.4, 0.2],
+        [0.75, 0.08],
+        [1, 0],
+      ],
+      spineStart: 0.185,
+      neuralLen: 0.8,
+      haemalLen: 0.8,
+      spineLean: 0.55,
+      ribs: 0.75,
+      ribCount: 11,
+      intermuscular: 0,
+      skullScale: 1.1,
+      branchiostegals: 12,
+      jawBone: 1.2,
+      caudalUp: 0.06,
+      caudalExt: 0.01,
+      otolith: 0.7,
+      weberian: 1,
+      pharyngeal: 0,
+    },
+    organs: {
+      // 体腔短, 肛门在臀鳍起点前方
+      cavity: { s0: 0.19, s1: 0.42, top: 0.88, bottom: 0.85, width: 0.84 },
+      heart: { s: 0.16, h: -0.6, size: 1 },
+      liver: { s0: 0.195, s1: 0.3, size: 1.1, lobes: 2, color: '#7a3226' },
+      stomach: { s0: 0.21, s1: 0.33, size: 1.15, shape: 0 },
+      caeca: { count: 0, len: 0.02 },
+      intestine: { loops: 1, size: 0.9, end: 0.42, spiral: 0 },
+      swimBladder: { s0: 0.2, s1: 0.31, size: 1, kind: 1, v: 0.5, branches: 0 },
+      gonad: { s0: 0.25, s1: 0.4, size: 1, color: '#d8a048', eggs: 1 },
+      brain: { s: 0.09, size: 0.9, tectum: 0.7 },
+      redMuscle: 0.06,
+      muscleColor: '#f4e2d8',
+      vent: 0.42,
+    },
+    // 长臀鳍的波动辅助身体后半段的大幅摆动
+    swim: { mode: 'anguilliform', freq: 1.0, wavelength: 0.8, amp: [0.025, -0.04, 0.13], headYaw: 0.7, speed: 0.5, pectoralRow: 0.6 },
+    extras: {
+      // 颌须 1 对 (长, 后伸可达胸鳍末端), 颏须 1 对 (短)
+      barbels: {
+        items: [
+          { s: 0.03, th: -1.25, len: 0.085, dir: [0.15, -0.95, 0.3], droop: 0.2 },
+          { s: 0.042, th: -0.05, len: 0.25, dir: [0.82, -0.42, 0.4], droop: 0.35 },
+        ],
+        thick: 0.85,
+        color: '#c8c0a8',
+      },
+    },
+    physiology: { heartRate: 45, breathRate: 50, tempC: 20, depthM: 3, endotherm: 0 },
+    lighting: { warm: 0.6 },
+  });
+}

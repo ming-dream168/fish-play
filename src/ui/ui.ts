@@ -4,12 +4,14 @@ import * as THREE from 'three';
 import './style.css';
 import type { Fish, Part } from '../core/fish';
 import type { Mode, ModeController, LayerKey } from '../render/modes';
-import { SPECIES_ORDER, type SpeciesId, type StructureId } from '../data/types';
+import { SPECIES_GROUPS, groupOf, isCrustacean, leaves, type Clade, type SpeciesGroup, type SpeciesId, type StructureId } from '../data/types';
 import { speciesInfo, structureInfo, SYSTEM_ZH } from '../data';
-import { drawSilhouette } from './silhouette';
+import { drawSilhouette, drawCrustaceanSilhouette } from './silhouette';
 import { EcgMonitor } from './ecg';
 import { LabelLayer, type LabelItem } from './labels';
 import type { SpeciesSpec } from '../core/spec';
+import type { Crustacean } from '../core/crustacean';
+import { CRUST_PARTS } from '../data/crustacean-parts';
 
 export interface App {
   fish: Fish;
@@ -31,6 +33,8 @@ export interface App {
   demo(id: string): void;
   demoFor(species: SpeciesId, index: number): { id: string; label: string } | null;
   specOf(id: SpeciesId): SpeciesSpec | null;
+  /** 当前显示的是甲壳动物时返回其模型, 否则 null */
+  readonly crustacean: Crustacean | null;
   setFlowVisual(v: 'vorticity' | 'piv' | 'both'): void;
   sfx(kind: 'hover' | 'click' | 'toggle' | 'open' | 'close'): void;
   /** 界面面板尺寸变了, 重新计算取景. */
@@ -63,14 +67,6 @@ const LABELS: Record<Mode, string[]> = {
   flow: ['fin:caudalFin', 'fin:dorsalFin', 'fin:pectoralFin'],
 };
 
-const CLADE_NOTE = '按系统发育排列: 软骨鱼 → 软骨硬鳞鱼 → 真骨鱼. 左侧树线是它们的亲缘关系.';
-
-// 系统发育树 (嵌套数组, 叶子是物种). 索引列表按叶子顺序排列, 树线按这个拓扑画.
-// 软骨鱼 → 鲟 (软骨硬鳞类) → 真骨鱼: 鲤 (骨鳔类), 鲑, 再到鲈形总目: 金枪鱼与带鱼同属鲭形目,
-// 黄鳝 (合鳃鱼目) 与真鲈类 (大黄鱼, 鮟鱇, 河鲀) 更近, 鮟鱇目与鲀形目互为姊妹.
-type Clade = SpeciesId | Clade[];
-const TREE: Clade = ['whaleshark', ['sturgeon', ['carp', ['chum', [['bluefin', 'hairtail'], ['ricefield', ['largeyellow', ['goosefish', 'puffer']]]]]]]];
-const leaves = (c: Clade): SpeciesId[] => (Array.isArray(c) ? c.flatMap(leaves) : [c]);
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, html?: string) {
   const e = document.createElement(tag);
@@ -95,6 +91,11 @@ export class AtlasUI {
   private toastT = 0;
   private cladeSvg: SVGSVGElement;
   private indexEl: HTMLElement;
+  private listEl: HTMLElement;
+  private noteEl: HTMLElement;
+  private countEl: HTMLElement;
+  private tabBtns = new Map<string, HTMLButtonElement>();
+  private group: SpeciesGroup;
   private tools: Record<string, HTMLButtonElement> = {};
   private mouse = { x: 0, y: 0 };
   private hoverSid: StructureId | null = null;
@@ -112,28 +113,37 @@ export class AtlasUI {
     // 物种索引
     this.indexEl = el('nav', 'index');
     this.indexEl.setAttribute('aria-label', '物种索引');
-    const head = el('div', 'index-head', `<span>标本</span><span>${SPECIES_ORDER.length} 种</span>`);
-    this.indexEl.appendChild(head);
-    for (const id of leaves(TREE)) {
-      const spec = app.specOf(id);
-      const info = speciesInfo(id);
-      const b = el('button', 'sp') as HTMLButtonElement;
-      b.type = 'button';
-      b.setAttribute('aria-pressed', String(id === app.species));
-      b.disabled = !spec;
-      b.innerHTML = `<span></span><canvas></canvas><span class="names"><span class="zh">${info?.zh ?? id}</span><span class="la">${info?.latin ?? ''}</span></span>`;
-      b.addEventListener('click', () => {
-        app.sfx('click');
-        app.selectSpecies(id);
+    // 分组页签 (按栖息水层)
+    this.group = groupOf(app.species);
+    const tabs = el('div', 'index-tabs');
+    tabs.setAttribute('role', 'tablist');
+    for (const g of SPECIES_GROUPS) {
+      const t = el('button', 'index-tab', g.zh) as HTMLButtonElement;
+      t.type = 'button';
+      t.setAttribute('role', 'tab');
+      t.addEventListener('click', () => {
+        if (g === this.group) return;
+        app.sfx('toggle');
+        this.setGroup(g);
+        // 切到新分组时直接展示该组第一个标本
+        const first = leaves(g.tree).find((id) => app.specOf(id) || isCrustacean(id));
+        if (first && !leaves(g.tree).includes(app.species)) app.selectSpecies(first);
       });
-      b.addEventListener('mouseenter', () => app.sfx('hover'));
-      this.indexEl.appendChild(b);
-      this.spBtns.set(id, b);
+      tabs.appendChild(t);
+      this.tabBtns.set(g.id, t);
     }
+    this.indexEl.appendChild(tabs);
+    const head = el('div', 'index-head', `<span>标本</span>`);
+    this.countEl = el('span');
+    head.appendChild(this.countEl);
+    this.indexEl.appendChild(head);
+    this.listEl = el('div', 'index-list');
+    this.indexEl.appendChild(this.listEl);
     this.cladeSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     this.cladeSvg.classList.add('clade');
-    this.indexEl.appendChild(this.cladeSvg);
-    this.indexEl.appendChild(el('div', 'clade-note', CLADE_NOTE));
+    this.noteEl = el('div', 'clade-note');
+    this.indexEl.appendChild(this.noteEl);
+    this.buildIndex();
     this.root.appendChild(this.indexEl);
 
     // 工具
@@ -252,13 +262,55 @@ export class AtlasUI {
   }
 
   // ---------- 物种索引 ----------
+  private buildIndex() {
+    const app = this.app;
+    const g = this.group;
+    for (const [k, t] of this.tabBtns) t.setAttribute('aria-selected', String(k === g.id));
+    this.listEl.innerHTML = '';
+    this.spBtns.clear();
+    const ids = leaves(g.tree);
+    this.countEl.textContent = `${ids.length} 种`;
+    this.listEl.classList.toggle('dense', ids.length > 12);
+    for (const id of ids) {
+      const info = speciesInfo(id);
+      const b = el('button', 'sp') as HTMLButtonElement;
+      b.type = 'button';
+      b.setAttribute('aria-pressed', String(id === app.species));
+      b.disabled = !app.specOf(id) && !isCrustacean(id);
+      b.innerHTML = `<span></span><canvas></canvas><span class="names"><span class="zh">${info?.zh ?? id}</span><span class="la">${info?.latin ?? ''}</span></span>`;
+      b.addEventListener('click', () => {
+        app.sfx('click');
+        app.selectSpecies(id);
+      });
+      b.addEventListener('mouseenter', () => app.sfx('hover'));
+      this.listEl.appendChild(b);
+      this.spBtns.set(id, b);
+    }
+    this.listEl.appendChild(this.cladeSvg);
+    this.noteEl.textContent = g.note;
+    this.refreshSilhouettes();
+    requestAnimationFrame(() => this.drawClade());
+  }
+
+  setGroup(g: SpeciesGroup) {
+    this.group = g;
+    this.buildIndex();
+    this.listEl.scrollTop = 0;
+  }
+
   refreshSilhouettes() {
     for (const [id, b] of this.spBtns) {
-      const spec = this.app.specOf(id);
-      if (!spec) continue;
       const cv = b.querySelector('canvas')!;
       const on = id === this.app.species;
-      drawSilhouette(cv, spec, on ? '#f0436f' : '#b9b3a5', on ? 'rgba(240,67,111,0.55)' : 'rgba(185,179,165,0.45)');
+      const col = on ? '#f0436f' : '#b9b3a5';
+      const fin = on ? 'rgba(240,67,111,0.55)' : 'rgba(185,179,165,0.45)';
+      if (isCrustacean(id)) {
+        drawCrustaceanSilhouette(cv, id, col, fin);
+        continue;
+      }
+      const spec = this.app.specOf(id);
+      if (!spec) continue;
+      drawSilhouette(cv, spec, col, fin);
     }
   }
 
@@ -285,7 +337,7 @@ export class AtlasUI {
       paths += `M${x} ${kids[0].y}V${kids[kids.length - 1].y}`;
       return { x, y: (kids[0].y + kids[kids.length - 1].y) / 2 };
     };
-    draw(TREE, 0);
+    draw(this.group.tree, 0);
     const dots = ys.map((y, i) => `<circle cx="${leafX + 1.5}" cy="${y}" r="2.4" data-i="${i}"/>`).join('');
     svg.innerHTML = `<path d="${paths}"/>${dots}`;
     // 让选中行的圆点变色
@@ -296,7 +348,11 @@ export class AtlasUI {
   }
 
   syncSpecies() {
-    for (const [id, b] of this.spBtns) b.setAttribute('aria-pressed', String(id === this.app.species));
+    if (!leaves(this.group.tree).includes(this.app.species)) this.setGroup(groupOf(this.app.species));
+    for (const [id, b] of this.spBtns) {
+      b.setAttribute('aria-pressed', String(id === this.app.species));
+      if (id === this.app.species) b.scrollIntoView({ block: 'nearest' });
+    }
     this.refreshSilhouettes();
     this.drawClade();
     this.renderSpecies();
@@ -307,7 +363,8 @@ export class AtlasUI {
   renderSpecies() {
     const id = this.app.species;
     const info = speciesInfo(id);
-    const idx = SPECIES_ORDER.indexOf(id) + 1;
+    const order = leaves(groupOf(id).tree);
+    const idx = order.indexOf(id) + 1;
     const c = this.card;
     c.innerHTML = '';
     if (!info) {
@@ -315,7 +372,7 @@ export class AtlasUI {
       c.appendChild(el('h2', '', id));
       return;
     }
-    c.appendChild(el('div', 'eyebrow', `<span>标本 ${String(idx).padStart(2, '0')} / ${String(SPECIES_ORDER.length).padStart(2, '0')}</span><span>${info.taxonomy.class.split(' ')[0]}</span>`));
+    c.appendChild(el('div', 'eyebrow', `<span>${groupOf(id).zh} · 标本 ${String(idx).padStart(2, '0')} / ${String(order.length).padStart(2, '0')}</span><span>${info.taxonomy.class.split(' ')[0]}</span>`));
     const h = el('div');
     h.appendChild(el('h2', '', info.zh));
     h.appendChild(el('div', 'latin', `${info.latin}<small>${info.authority}</small>`));
@@ -376,6 +433,21 @@ export class AtlasUI {
   }
 
   showStructure(sid: StructureId) {
+    const cr = this.app.crustacean;
+    if (cr) {
+      const info = CRUST_PARTS[this.app.species]?.[sid];
+      if (!info) return;
+      this.card.querySelector('.struct')?.remove();
+      const box = el('section', 'struct');
+      box.innerHTML = `<div class="sys">甲壳动物结构</div><h3>${info.zh}<small>${info.en}</small></h3><p>${info.body}</p>`;
+      const close = el('button', 'close', '← 返回物种概览') as HTMLButtonElement;
+      close.type = 'button';
+      close.addEventListener('click', () => this.hideStructure());
+      box.appendChild(close);
+      this.card.prepend(box);
+      this.card.scrollTop = 0;
+      return;
+    }
     const s = structureInfo(sid);
     const note = s.speciesNotes?.[this.app.species];
     const c = this.card;
@@ -397,7 +469,12 @@ export class AtlasUI {
 
   // ---------- 模式与图层 ----------
   syncMode() {
-    for (const [m, b] of this.modeBtns) b.setAttribute('aria-pressed', String(m === this.app.modes.mode));
+    const crust = !!this.app.crustacean;
+    this.root.classList.toggle('crust', crust);
+    for (const [m, b] of this.modeBtns) {
+      b.setAttribute('aria-pressed', String(m === this.app.modes.mode));
+      b.disabled = crust && m !== 'living';
+    }
     this.renderContext();
     this.refreshLabels();
   }
@@ -485,6 +562,18 @@ export class AtlasUI {
   // ---------- 标注 ----------
   refreshLabels() {
     const app = this.app;
+    const cr = app.crustacean;
+    if (cr) {
+      // 甲壳动物: 标注直接指向模型上的关节节点; sid 借用结构 ID 的位置, 点击时查甲壳动物的结构表
+      const items: LabelItem[] = cr.parts.map((p) => ({
+        key: 'crust:' + p.key,
+        sid: p.key as StructureId,
+        text: p.zh,
+        anchor: () => p.anchor.getWorldPosition(new THREE.Vector3()),
+      }));
+      this.labels.setItems(items);
+      return;
+    }
     const f = app.fish;
     const list = LABELS[app.modes.mode];
     const items: LabelItem[] = [];
